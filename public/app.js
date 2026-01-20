@@ -74,20 +74,31 @@
   const emptyState = /** @type {HTMLElement} */ (
     document.getElementById('empty-state')
   );
+  const filterContainer = document.getElementById('priority-filters');
 
   // State
   let tasks = loadTasks();
+  let currentFilter = 'all';
+
+  function getFilteredTasks() {
+    if (currentFilter === 'all') return tasks;
+    return tasks.filter((t) => t.priority === currentFilter);
+  }
 
   // Render
   function render() {
     list.innerHTML = '';
-    if (!tasks.length) {
+
+    const visibleTasks = getFilteredTasks();
+
+    if (!visibleTasks.length) {
       emptyState.style.display = 'block';
       return;
     }
+
     emptyState.style.display = 'none';
 
-    tasks
+    [...visibleTasks]
       .sort((a, b) => {
         // Not-done first, then by priority (high->low), then newest first
         if (a.completed !== b.completed) return a.completed ? 1 : -1;
@@ -102,27 +113,27 @@
         li.className = 'task' + (t.completed ? ' done' : '');
         li.dataset.id = t.id;
         li.innerHTML = `
-					<div>
-						<div class="title">${escapeHtml(t.topic)}</div>
-						<div class="desc">${escapeHtml(t.description || '')}</div>
-					</div>
-					<div class="meta">
-						<span class="badge prio-${t.priority}">
-							<span class="dot"></span>
-							${t.priority.charAt(0).toUpperCase() + t.priority.slice(1)}
-						</span>
-					</div>
-					<div class="meta">
-						${badgeForStatus(t.status)}
-					</div>
-					<div class="controls">
-						<button data-action="edit" class="secondary">Edit</button>
-						<button data-action="complete" class="${t.completed ? 'secondary' : ''}">
-							${t.completed ? 'Undo' : 'Complete'}
-						</button>
-						<button data-action="delete" class="danger">Delete</button>
-					</div>
-				`;
+          <div>
+            <div class="title">${escapeHtml(t.topic)}</div>
+            <div class="desc">${escapeHtml(t.description || '')}</div>
+          </div>
+          <div class="meta">
+            <span class="badge prio-${t.priority}">
+              <span class="dot"></span>
+              ${t.priority.charAt(0).toUpperCase() + t.priority.slice(1)}
+            </span>
+          </div>
+          <div class="meta">
+            ${badgeForStatus(t.status)}
+          </div>
+          <div class="controls">
+            <button data-action="edit" class="secondary">Edit</button>
+            <button data-action="complete" class="${t.completed ? 'secondary' : ''}">
+              ${t.completed ? 'Undo' : 'Complete'}
+            </button>
+            <button data-action="delete" class="danger">Delete</button>
+          </div>
+        `;
         list.appendChild(li);
       });
   }
@@ -232,8 +243,8 @@
         status: nextCompleted
           ? 'done'
           : t.status === 'done'
-          ? 'todo'
-          : t.status,
+            ? 'todo'
+            : t.status,
         updatedAt: Date.now(),
       };
       saveTasks(tasks);
@@ -247,6 +258,22 @@
       render();
     }
   });
+
+  // Filter buttons
+  if (filterContainer) {
+    filterContainer.addEventListener('click', (e) => {
+      const btn = e.target;
+      if (btn.tagName !== 'BUTTON') return;
+      currentFilter = btn.dataset.filter;
+
+      [...filterContainer.children].forEach((b) =>
+        b.classList.remove('active'),
+      );
+      btn.classList.add('active');
+
+      render();
+    });
+  }
 
   // Initial paint
   render();
